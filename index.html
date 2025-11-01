@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Automated Sales Portal</title>
-    <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Custom styles for aesthetic enhancements */
@@ -50,18 +49,15 @@
         <p class="text-gray-500 mt-1">Record, Calculate, and Automate with Google Sheets</p>
     </header>
 
-    <!-- Loading Overlay -->
     <div id="loading-overlay" class="loading-overlay">
         <div class="loader"></div>
     </div>
 
     <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Sales Entry Form (Left Column) -->
         <section class="lg:col-span-2 card bg-white p-6 rounded-xl">
             <h2 class="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Record New Sale</h2>
 
             <form id="salesForm" class="space-y-4">
-                <!-- Customer Details -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label for="customerName" class="block text-sm font-medium text-gray-700">Customer Name (Optional)</label>
@@ -73,7 +69,6 @@
                     </div>
                 </div>
 
-                <!-- Product Details -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                         <label for="productName" class="block text-sm font-medium text-gray-700">Product Name</label>
@@ -89,10 +84,26 @@
                     </div>
                 </div>
 
-                <!-- Calculated Total -->
-                <div>
-                    <p class="text-lg font-bold text-gray-800">Sale Total: <span id="saleTotal" class="text-indigo-600">KSh 0.00</span></p>
-                    <input type="hidden" id="calculatedTotal" name="calculatedTotal">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
+                    <div>
+                        <p class="text-lg font-bold text-gray-800">Sale Total: <span id="saleTotal" class="text-indigo-600">KSh 0.00</span></p>
+                        <input type="hidden" id="calculatedTotal" name="calculatedTotal">
+                    </div>
+                    <div>
+                        <label for="cashTendered" class="block text-sm font-medium text-gray-700">Cash Tendered (KSh)</label>
+                        <input type="number" id="cashTendered" name="cashTendered" step="0.01" min="0" required value="0.00" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border text-lg font-semibold">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div id="changeGivenContainer">
+                        <p class="text-md font-medium text-gray-800">Change Given: <span id="changeGivenDisplay" class="text-green-600 font-bold">KSh 0.00</span></p>
+                        <input type="hidden" id="changeGiven" name="changeGiven">
+                    </div>
+                    <div id="creditDueContainer">
+                        <p class="text-md font-medium text-gray-800">Credit Due: <span id="creditDueDisplay" class="text-red-600 font-bold">KSh 0.00</span></p>
+                        <input type="hidden" id="creditDue" name="creditDue">
+                    </div>
                 </div>
                 
                 <button type="submit" class="w-full py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
@@ -100,11 +111,9 @@
                 </button>
             </form>
 
-            <!-- Status Message Box -->
             <div id="statusMessage" class="mt-4 p-4 rounded-md hidden"></div>
         </section>
 
-        <!-- Live Dashboard (Right Column) -->
         <section class="lg:col-span-1 space-y-6">
             <h2 class="text-2xl font-semibold text-gray-800 border-b pb-2">Live Dashboard</h2>
             <button onclick="fetchDashboardData()" class="w-full py-2 px-4 text-sm font-medium text-indigo-600 border border-indigo-600 rounded-md hover:bg-indigo-50 transition duration-150 ease-in-out">
@@ -112,7 +121,6 @@
             </button>
 
             <div id="dashboardMetrics" class="space-y-4">
-                <!-- Metrics will be inserted here by JavaScript -->
                 <div class="dashboard-metric bg-white p-4 rounded-xl">
                     <p class="text-sm font-medium text-gray-500">Total Sales Today</p>
                     <p id="metricSalesToday" class="text-2xl font-extrabold text-gray-900 mt-1">--</p>
@@ -129,7 +137,6 @@
         </section>
     </div>
 
-    <!-- JavaScript Logic -->
     <script>
         // CRITICAL: GOOGLE APPS SCRIPT WEB APP URL (Provided by User)
         const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwWo1GI42B9Os1-yI31PjSEr_gXS1aoG9NtBjm2u2ZOxNZDQ_YFk3cx09q6MrUhnAMS_g/exec";
@@ -137,8 +144,16 @@
         const form = document.getElementById('salesForm');
         const quantityInput = document.getElementById('quantity');
         const priceInput = document.getElementById('unitPrice');
+        const cashTenderedInput = document.getElementById('cashTendered'); // New: Cash Tendered
+        
         const saleTotalDisplay = document.getElementById('saleTotal');
         const calculatedTotalInput = document.getElementById('calculatedTotal');
+        
+        const changeGivenDisplay = document.getElementById('changeGivenDisplay'); // New: Change Display
+        const changeGivenInput = document.getElementById('changeGiven'); // New: Change Input
+        const creditDueDisplay = document.getElementById('creditDueDisplay'); // New: Credit Display
+        const creditDueInput = document.getElementById('creditDue'); // New: Credit Input
+        
         const statusMessage = document.getElementById('statusMessage');
         const loadingOverlay = document.getElementById('loading-overlay');
 
@@ -162,20 +177,62 @@
         }
 
         /**
-         * Calculates the total sale amount dynamically as the user types.
+         * Calculates the total sale amount and the change/credit dynamically.
          */
-        function calculateTotal() {
+        function calculateAllTotals() {
             const qty = parseFloat(quantityInput.value) || 0;
             const price = parseFloat(priceInput.value) || 0;
+            const cash = parseFloat(cashTenderedInput.value) || 0;
+
             const total = qty * price;
-            // Updated: Use KSh for the calculated total display
+            const difference = cash - total;
+            
+            // Format total display and hidden input
             saleTotalDisplay.textContent = `KSh ${total.toFixed(2)}`;
-            calculatedTotalInput.value = total.toFixed(2); // Store for submission
+            calculatedTotalInput.value = total.toFixed(2); 
+
+            // Calculate Change Given and Credit Due
+            let change = 0.00;
+            let credit = 0.00;
+
+            if (difference > 0) {
+                change = difference;
+                credit = 0.00;
+            } else if (difference < 0) {
+                change = 0.00;
+                credit = Math.abs(difference);
+            }
+            
+            // Update Change Display
+            changeGivenDisplay.textContent = `KSh ${change.toFixed(2)}`;
+            changeGivenInput.value = change.toFixed(2);
+
+            // Update Credit Display
+            creditDueDisplay.textContent = `KSh ${credit.toFixed(2)}`;
+            creditDueInput.value = credit.toFixed(2);
+            
+            // Styling for clarity (optional but helpful)
+            document.getElementById('changeGivenContainer').classList.toggle('hidden', change === 0.00);
+            document.getElementById('creditDueContainer').classList.toggle('hidden', credit === 0.00);
+
+            if (change > 0) {
+                changeGivenDisplay.classList.remove('text-red-600');
+                changeGivenDisplay.classList.add('text-green-600');
+            } else if (credit > 0) {
+                creditDueDisplay.classList.remove('text-green-600');
+                creditDueDisplay.classList.add('text-red-600');
+            } else {
+                changeGivenDisplay.classList.remove('text-red-600');
+                changeGivenDisplay.classList.add('text-green-600');
+                creditDueDisplay.classList.remove('text-red-600');
+                creditDueDisplay.classList.add('text-green-600');
+            }
         }
 
         // Event listeners for dynamic calculation
-        quantityInput.addEventListener('input', calculateTotal);
-        priceInput.addEventListener('input', calculateTotal);
+        quantityInput.addEventListener('input', calculateAllTotals);
+        priceInput.addEventListener('input', calculateAllTotals);
+        cashTenderedInput.addEventListener('input', calculateAllTotals); // New listener for real-time change/credit
 
         /**
          * Submits the form data to the Apps Script Web App.
@@ -200,7 +257,8 @@
             // Exponential backoff for API call
             for (let i = 0; i < 3; i++) {
                 try {
-                    const response = await fetch(url, {
+                    // Use a more appropriate method for POST to Apps Script, passing data in the body
+                    const response = await fetch(APPS_SCRIPT_WEB_APP_URL, {
                         method: 'POST',
                         mode: 'cors', // Crucial for cross-origin requests
                         headers: {
@@ -229,7 +287,7 @@
             if (success) {
                 showStatus(`Sale recorded successfully! Receipt sent to ${data.customerEmail}.`, "success");
                 form.reset();
-                calculateTotal(); // Reset total display
+                calculateAllTotals(); // Reset total and change/credit display
                 fetchDashboardData(); // Refresh dashboard
             } else {
                 showStatus(`Failed to record sale. Error: ${responseData.message || 'Check Apps Script logs.'}`, "error");
@@ -276,7 +334,7 @@
 
         // Initialize on load
         window.onload = () => {
-            calculateTotal(); // Set initial total to 0.00
+            calculateAllTotals(); // Set initial total, change, and credit
             fetchDashboardData(); // Load dashboard on startup
         };
 
