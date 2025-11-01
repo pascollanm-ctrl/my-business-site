@@ -84,14 +84,14 @@
                         <input type="number" id="quantity" name="quantity" min="1" required value="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border">
                     </div>
                     <div>
-                        <label for="unitPrice" class="block text-sm font-medium text-gray-700">Unit Price ($)</label>
+                        <label for="unitPrice" class="block text-sm font-medium text-gray-700">Unit Price (KSh)</label>
                         <input type="number" id="unitPrice" name="unitPrice" step="0.01" min="0.01" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border">
                     </div>
                 </div>
 
                 <!-- Calculated Total -->
                 <div>
-                    <p class="text-lg font-bold text-gray-800">Sale Total: <span id="saleTotal" class="text-indigo-600">$0.00</span></p>
+                    <p class="text-lg font-bold text-gray-800">Sale Total: <span id="saleTotal" class="text-indigo-600">KSh 0.00</span></p>
                     <input type="hidden" id="calculatedTotal" name="calculatedTotal">
                 </div>
                 
@@ -131,8 +131,8 @@
 
     <!-- JavaScript Logic -->
     <script>
-        // CRITICAL: REPLACE THIS PLACEHOLDER WITH YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL
-        const APPS_SCRIPT_WEB_APP_URL = "YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+        // CRITICAL: GOOGLE APPS SCRIPT WEB APP URL (Provided by User)
+        const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwWo1GI42B9Os1-yI31PjSEr_gXS1aoG9NtBjm2u2ZOxNZDQ_YFk3cx09q6MrUhnAMS_g/exec";
 
         const form = document.getElementById('salesForm');
         const quantityInput = document.getElementById('quantity');
@@ -168,7 +168,8 @@
             const qty = parseFloat(quantityInput.value) || 0;
             const price = parseFloat(priceInput.value) || 0;
             const total = qty * price;
-            saleTotalDisplay.textContent = `$${total.toFixed(2)}`;
+            // Updated: Use KSh for the calculated total display
+            saleTotalDisplay.textContent = `KSh ${total.toFixed(2)}`;
             calculatedTotalInput.value = total.toFixed(2); // Store for submission
         }
 
@@ -182,10 +183,6 @@
          */
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
-
-            if (APPS_SCRIPT_WEB_APP_URL === "YOUR_APPS_SCRIPT_WEB_APP_URL_HERE") {
-                return showStatus("ERROR: Please update APPS_SCRIPT_WEB_APP_URL in script.js.", "error");
-            }
 
             loadingOverlay.style.display = 'flex';
             
@@ -243,10 +240,6 @@
          * Fetches and updates the dashboard metrics.
          */
         async function fetchDashboardData() {
-            if (APPS_SCRIPT_WEB_APP_URL === https://script.google.com/macros/s/AKfycbwWo1GI42B9Os1-yI31PjSEr_gXS1aoG9NtBjm2u2ZOxNZDQ_YFk3cx09q6MrUhnAMS_g/exec) {
-                return; // Do not fetch if URL is not set
-            }
-            
             loadingOverlay.style.display = 'flex';
 
             const url = `${APPS_SCRIPT_WEB_APP_URL}`;
@@ -261,7 +254,11 @@
                     const data = await response.json();
                     
                     document.getElementById('metricSalesToday').textContent = data.salesToday;
-                    document.getElementById('metricRevenueMonth').textContent = data.revenueMonth;
+
+                    // Updated: Assume the backend sends "$123.45" and replace the '$' with 'KSh '
+                    const revenueKsh = String(data.revenueMonth).replace(/^\$/, 'KSh ');
+                    document.getElementById('metricRevenueMonth').textContent = revenueKsh;
+
                     document.getElementById('metricTopProduct').textContent = data.topProduct;
                     
                     showStatus("Dashboard data refreshed.", "success");
