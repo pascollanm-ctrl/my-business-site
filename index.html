@@ -91,7 +91,7 @@
                     </div>
                     <div>
                         <label for="cashTendered" class="block text-sm font-medium text-gray-700">Cash Tendered (KSh)</label>
-                        <input type="number" id="cashTendered" name="cashTendered" step="0.01" min="0" required value="0.00" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border text-lg font-semibold">
+                        <input type="number" id="cashTendered" name="amountPaid" step="0.01" min="0" required value="0.00" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border text-lg font-semibold">
                     </div>
                 </div>
 
@@ -144,15 +144,15 @@
         const form = document.getElementById('salesForm');
         const quantityInput = document.getElementById('quantity');
         const priceInput = document.getElementById('unitPrice');
-        const cashTenderedInput = document.getElementById('cashTendered'); // New: Cash Tendered
+        const cashTenderedInput = document.getElementById('cashTendered'); // Still use ID 'cashTendered' for JS calculations
         
         const saleTotalDisplay = document.getElementById('saleTotal');
         const calculatedTotalInput = document.getElementById('calculatedTotal');
         
-        const changeGivenDisplay = document.getElementById('changeGivenDisplay'); // New: Change Display
-        const changeGivenInput = document.getElementById('changeGiven'); // New: Change Input
-        const creditDueDisplay = document.getElementById('creditDueDisplay'); // New: Credit Display
-        const creditDueInput = document.getElementById('creditDue'); // New: Credit Input
+        const changeGivenDisplay = document.getElementById('changeGivenDisplay'); 
+        const changeGivenInput = document.getElementById('changeGiven'); 
+        const creditDueDisplay = document.getElementById('creditDueDisplay'); 
+        const creditDueInput = document.getElementById('creditDue'); 
         
         const statusMessage = document.getElementById('statusMessage');
         const loadingOverlay = document.getElementById('loading-overlay');
@@ -212,8 +212,8 @@
             creditDueInput.value = credit.toFixed(2);
             
             // Styling for clarity (optional but helpful)
-            document.getElementById('changeGivenContainer').classList.toggle('hidden', change === 0.00);
-            document.getElementById('creditDueContainer').classList.toggle('hidden', credit === 0.00);
+            document.getElementById('changeGivenContainer').classList.toggle('hidden', change === 0.00 && credit > 0);
+            document.getElementById('creditDueContainer').classList.toggle('hidden', credit === 0.00 && change > 0);
 
             if (change > 0) {
                 changeGivenDisplay.classList.remove('text-red-600');
@@ -232,7 +232,7 @@
         // Event listeners for dynamic calculation
         quantityInput.addEventListener('input', calculateAllTotals);
         priceInput.addEventListener('input', calculateAllTotals);
-        cashTenderedInput.addEventListener('input', calculateAllTotals); // New listener for real-time change/credit
+        cashTenderedInput.addEventListener('input', calculateAllTotals); // Listener for real-time change/credit
 
         /**
          * Submits the form data to the Apps Script Web App.
@@ -243,13 +243,15 @@
 
             loadingOverlay.style.display = 'flex';
             
+            // Ensure final calculation is correct before submission
+            calculateAllTotals(); 
+
             const formData = new FormData(form);
             const data = {};
             formData.forEach((value, key) => data[key] = value);
             
-            // Format data for URL submission (Apps Script uses e.postData.contents)
+            // Format data for URL-encoded POST body
             const params = new URLSearchParams(data);
-            const url = `${APPS_SCRIPT_WEB_APP_URL}?${params.toString()}`;
 
             let success = false;
             let responseData = { result: "Error", message: "Network error or script timeout." };
@@ -257,7 +259,6 @@
             // Exponential backoff for API call
             for (let i = 0; i < 3; i++) {
                 try {
-                    // Use a more appropriate method for POST to Apps Script, passing data in the body
                     const response = await fetch(APPS_SCRIPT_WEB_APP_URL, {
                         method: 'POST',
                         mode: 'cors', // Crucial for cross-origin requests
@@ -300,7 +301,7 @@
         async function fetchDashboardData() {
             loadingOverlay.style.display = 'flex';
 
-            const url = `${APPS_SCRIPT_WEB_APP_URL}`;
+            const url = `${APPS_SCRIPT_WEB_APP_URL}?action=getDashboard`; // Added action parameter for doGet
 
             try {
                 const response = await fetch(url, {
