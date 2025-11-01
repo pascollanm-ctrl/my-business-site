@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automated Sales Portal</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for aesthetic enhancements */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7fafc;
+        }
+        .card {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .dashboard-metric {
+            border-left: 4px solid #3b82f6; /* Blue border */
+        }
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            z-index: 50;
+            justify-content: center;
+            align-items: center;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 4px solid #3b82f6;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <header class="mb-10 text-center">
+        <h1 class="text-4xl font-extrabold text-gray-900">Smart Sales Hub</h1>
+        <p class="text-gray-500 mt-1">Record, Calculate, and Automate with Google Sheets</p>
+    </header>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loader"></div>
+    </div>
+
+    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Sales Entry Form (Left Column) -->
+        <section class="lg:col-span-2 card bg-white p-6 rounded-xl">
+            <h2 class="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Record New Sale</h2>
+
+            <form id="salesForm" class="space-y-4">
+                <!-- Customer Details -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="customerName" class="block text-sm font-medium text-gray-700">Customer Name (Optional)</label>
+                        <input type="text" id="customerName" name="customerName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border">
+                    </div>
+                    <div>
+                        <label for="customerEmail" class="block text-sm font-medium text-gray-700">Customer Email (for Receipt)</label>
+                        <input type="email" id="customerEmail" name="customerEmail" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border">
+                    </div>
+                </div>
+
+                <!-- Product Details -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label for="productName" class="block text-sm font-medium text-gray-700">Product Name</label>
+                        <input type="text" id="productName" name="productName" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border">
+                    </div>
+                    <div>
+                        <label for="quantity" class="block text-sm font-medium text-gray-700">Quantity</label>
+                        <input type="number" id="quantity" name="quantity" min="1" required value="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border">
+                    </div>
+                    <div>
+                        <label for="unitPrice" class="block text-sm font-medium text-gray-700">Unit Price ($)</label>
+                        <input type="number" id="unitPrice" name="unitPrice" step="0.01" min="0.01" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border">
+                    </div>
+                </div>
+
+                <!-- Calculated Total -->
+                <div>
+                    <p class="text-lg font-bold text-gray-800">Sale Total: <span id="saleTotal" class="text-indigo-600">$0.00</span></p>
+                    <input type="hidden" id="calculatedTotal" name="calculatedTotal">
+                </div>
+                
+                <button type="submit" class="w-full py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
+                    Record Sale & Send Receipt
+                </button>
+            </form>
+
+            <!-- Status Message Box -->
+            <div id="statusMessage" class="mt-4 p-4 rounded-md hidden"></div>
+        </section>
+
+        <!-- Live Dashboard (Right Column) -->
+        <section class="lg:col-span-1 space-y-6">
+            <h2 class="text-2xl font-semibold text-gray-800 border-b pb-2">Live Dashboard</h2>
+            <button onclick="fetchDashboardData()" class="w-full py-2 px-4 text-sm font-medium text-indigo-600 border border-indigo-600 rounded-md hover:bg-indigo-50 transition duration-150 ease-in-out">
+                Refresh Data
+            </button>
+
+            <div id="dashboardMetrics" class="space-y-4">
+                <!-- Metrics will be inserted here by JavaScript -->
+                <div class="dashboard-metric bg-white p-4 rounded-xl">
+                    <p class="text-sm font-medium text-gray-500">Total Sales Today</p>
+                    <p id="metricSalesToday" class="text-2xl font-extrabold text-gray-900 mt-1">--</p>
+                </div>
+                <div class="dashboard-metric bg-white p-4 rounded-xl">
+                    <p class="text-sm font-medium text-gray-500">Revenue (Month)</p>
+                    <p id="metricRevenueMonth" class="text-2xl font-extrabold text-gray-900 mt-1">--</p>
+                </div>
+                <div class="dashboard-metric bg-white p-4 rounded-xl">
+                    <p class="text-sm font-medium text-gray-500">Top Selling Product</p>
+                    <p id="metricTopProduct" class="text-2xl font-extrabold text-gray-900 mt-1">--</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // CRITICAL: REPLACE THIS PLACEHOLDER WITH YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL
+        const APPS_SCRIPT_WEB_APP_URL = "YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+        const form = document.getElementById('salesForm');
+        const quantityInput = document.getElementById('quantity');
+        const priceInput = document.getElementById('unitPrice');
+        const saleTotalDisplay = document.getElementById('saleTotal');
+        const calculatedTotalInput = document.getElementById('calculatedTotal');
+        const statusMessage = document.getElementById('statusMessage');
+        const loadingOverlay = document.getElementById('loading-overlay');
+
+        /**
+         * Shows a temporary status message (success/error).
+         * @param {string} message - The message content.
+         * @param {string} type - 'success' or 'error'.
+         */
+        function showStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.classList.remove('hidden', 'bg-red-100', 'text-red-800', 'bg-green-100', 'text-green-800');
+            if (type === 'success') {
+                statusMessage.classList.add('bg-green-100', 'text-green-800');
+            } else {
+                statusMessage.classList.add('bg-red-100', 'text-red-800');
+            }
+            // Hide after 5 seconds
+            setTimeout(() => {
+                statusMessage.classList.add('hidden');
+            }, 5000);
+        }
+
+        /**
+         * Calculates the total sale amount dynamically as the user types.
+         */
+        function calculateTotal() {
+            const qty = parseFloat(quantityInput.value) || 0;
+            const price = parseFloat(priceInput.value) || 0;
+            const total = qty * price;
+            saleTotalDisplay.textContent = `$${total.toFixed(2)}`;
+            calculatedTotalInput.value = total.toFixed(2); // Store for submission
+        }
+
+        // Event listeners for dynamic calculation
+        quantityInput.addEventListener('input', calculateTotal);
+        priceInput.addEventListener('input', calculateTotal);
+
+        /**
+         * Submits the form data to the Apps Script Web App.
+         * @param {Event} event - The form submission event.
+         */
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            if (APPS_SCRIPT_WEB_APP_URL === "YOUR_APPS_SCRIPT_WEB_APP_URL_HERE") {
+                return showStatus("ERROR: Please update APPS_SCRIPT_WEB_APP_URL in script.js.", "error");
+            }
+
+            loadingOverlay.style.display = 'flex';
+            
+            const formData = new FormData(form);
+            const data = {};
+            formData.forEach((value, key) => data[key] = value);
+            
+            // Format data for URL submission (Apps Script uses e.postData.contents)
+            const params = new URLSearchParams(data);
+            const url = `${APPS_SCRIPT_WEB_APP_URL}?${params.toString()}`;
+
+            let success = false;
+            let responseData = { result: "Error", message: "Network error or script timeout." };
+
+            // Exponential backoff for API call
+            for (let i = 0; i < 3; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        mode: 'cors', // Crucial for cross-origin requests
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: params.toString() // Send data in body for POST
+                    });
+
+                    if (response.ok) {
+                        responseData = await response.json();
+                        success = responseData.result === "Success";
+                        break;
+                    } else {
+                        console.error(`Attempt ${i + 1} failed with status: ${response.status}`);
+                    }
+                } catch (error) {
+                    console.error(`Attempt ${i + 1} failed:`, error);
+                }
+                if (!success && i < 2) {
+                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000)); // Wait 1s, 2s, then 4s
+                }
+            }
+
+            loadingOverlay.style.display = 'none';
+
+            if (success) {
+                showStatus(`Sale recorded successfully! Receipt sent to ${data.customerEmail}.`, "success");
+                form.reset();
+                calculateTotal(); // Reset total display
+                fetchDashboardData(); // Refresh dashboard
+            } else {
+                showStatus(`Failed to record sale. Error: ${responseData.message || 'Check Apps Script logs.'}`, "error");
+            }
+        });
+
+        /**
+         * Fetches and updates the dashboard metrics.
+         */
+        async function fetchDashboardData() {
+            if (APPS_SCRIPT_WEB_APP_URL === https://script.google.com/macros/s/AKfycbwWo1GI42B9Os1-yI31PjSEr_gXS1aoG9NtBjm2u2ZOxNZDQ_YFk3cx09q6MrUhnAMS_g/exec) {
+                return; // Do not fetch if URL is not set
+            }
+            
+            loadingOverlay.style.display = 'flex';
+
+            const url = `${APPS_SCRIPT_WEB_APP_URL}`;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    document.getElementById('metricSalesToday').textContent = data.salesToday;
+                    document.getElementById('metricRevenueMonth').textContent = data.revenueMonth;
+                    document.getElementById('metricTopProduct').textContent = data.topProduct;
+                    
+                    showStatus("Dashboard data refreshed.", "success");
+
+                } else {
+                    showStatus("Failed to load dashboard data. Check Apps Script deployment.", "error");
+                }
+            } catch (error) {
+                console.error("Dashboard fetch error:", error);
+                showStatus("Dashboard network error. Check console.", "error");
+            } finally {
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        // Initialize on load
+        window.onload = () => {
+            calculateTotal(); // Set initial total to 0.00
+            fetchDashboardData(); // Load dashboard on startup
+        };
+
+    </script>
+</body>
+</html>
