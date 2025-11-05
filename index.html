@@ -3,341 +3,432 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Automated Sales Portal</title>
+    <title>Smart Business POS Terminal</title>
+    <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom styles for aesthetic enhancements */
+        /* Custom font */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f7fafc;
+            background-color: #f8fafc; /* Tailwind gray-50 */
         }
         .card {
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
-        .dashboard-metric {
-            border-left: 4px solid #3b82f6; /* Blue border */
+        /* Custom styling for the large total display */
+        #displayTotal {
+            transition: all 0.3s ease-in-out;
+            font-size: 2.5rem; /* Larger font for mobile */
         }
-        .loading-overlay {
-            display: none;
+        /* Modal backdrop styling */
+        .modal-backdrop {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(255, 255, 255, 0.8);
+            background-color: rgba(0, 0, 0, 0.75);
             z-index: 50;
-            justify-content: center;
-            align-items: center;
-        }
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-radius: 50%;
-            border-top: 4px solid #3b82f6;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
         }
     </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#3b82f6', // Blue-500
+                        'secondary': '#10b981', // Emerald-500
+                    }
+                }
+            }
+        }
+    </script>
 </head>
-<body class="p-4 md:p-8">
-    <header class="mb-10 text-center">
-        <h1 class="text-4xl font-extrabold text-gray-900">Smart Sales Hub</h1>
-        <p class="text-gray-500 mt-1">Record, Calculate, and Automate with Google Sheets</p>
-    </header>
+<body class="min-h-screen p-4 sm:p-8">
 
-    <div id="loading-overlay" class="loading-overlay">
-        <div class="loader"></div>
+    <script>
+    // CRITICAL: YOUR DEPLOYED GOOGLE APPS SCRIPT URL
+    const FORM_URL = 'https://script.google.com/macros/s/AKfycbwDaROC791s5DfluLFOEVyQaQPJKva6iwbF0Sq9faU25HvKmRhuTVzx7Aezyji1p1aeXQ/exec';
+    
+    // User/Business Email for Subscription Check
+    const BUSINESS_EMAIL = 'Pascollanm@gmail.com'; 
+    </script>
+
+    <!-- Subscription Alert Modal -->
+    <div id="renewalModal" class="modal-backdrop hidden transition duration-300 ease-in-out">
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="bg-white card rounded-xl max-w-lg w-full p-6 space-y-4 transform transition-all duration-300 scale-95 opacity-0" id="modalContent">
+                <h3 id="modalTitle" class="text-2xl font-bold text-red-600 border-b pb-2">Subscription Warning</h3>
+                <p id="modalMessage" class="text-gray-700"></p>
+                
+                <!-- Renewal Form -->
+                <form id="renewalForm" class="space-y-3 pt-3 border-t">
+                    <input type="hidden" name="action" value="renew">
+                    <input type="hidden" name="renewalEmail" id="renewalEmail" value="">
+                    
+                    <h4 class="text-lg font-semibold text-primary">Renew Now (30 Days)</h4>
+                    
+                    <div class="input-group">
+                        <label for="businessName" class="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
+                        <input type="text" name="businessName" id="businessName" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    </div>
+                    <div class="input-group">
+                        <label for="renewalAmount" class="block text-sm font-medium text-gray-700 mb-1">Amount Paid (KSh)</label>
+                        <input type="number" name="renewalAmount" id="renewalAmount" value="2000.00" min="1" step="0.01" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-secondary focus:border-secondary">
+                    </div>
+                    <div class="input-group">
+                        <label for="paymentReference" class="block text-sm font-medium text-gray-700 mb-1">Payment Reference/Code</label>
+                        <input type="text" name="paymentReference" id="paymentReference" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    </div>
+
+                    <button type="submit" class="w-full py-2 bg-secondary text-white font-bold rounded-lg hover:bg-secondary/90 transition duration-150">
+                        Process Renewal (Mock Payment)
+                    </button>
+                    <div id="renewalStatusMessage" class="text-center mt-2 text-sm"></div>
+                </form>
+
+                <button onclick="closeRenewalModal()" class="w-full py-1 text-sm text-gray-500 hover:text-gray-700">Close POS (For now)</button>
+            </div>
+        </div>
     </div>
 
-    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <section class="lg:col-span-2 card bg-white p-6 rounded-xl">
-            <h2 class="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Record New Sale</h2>
 
-            <form id="salesForm" class="space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="customerName" class="block text-sm font-medium text-gray-700">Customer Name (Optional)</label>
-                        <input type="text" id="customerName" name="customerName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border">
+    <div class="max-w-4xl mx-auto">
+        <header class="mb-6 text-center">
+            <h1 class="text-3xl font-extrabold text-primary">Smart Sales Terminal (KSh)</h1>
+            <p class="text-gray-500 mt-1">Process sales quickly and record transactions instantly.</p>
+        </header>
+
+        <!-- Subscription Status Bar -->
+        <div id="subscriptionBar" class="p-3 mb-6 rounded-lg text-sm flex justify-between items-center text-white font-medium bg-gray-600 transition-all duration-300">
+            <span>Subscription Status: <span id="subStatus">Loading...</span></span>
+            <span id="subExpiry">Expiry: N/A</span>
+        </div>
+
+        <form id="salesForm" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- Transaction Details Column (Left/Top) -->
+            <div class="lg:col-span-2 space-y-4 card bg-white p-6 rounded-xl">
+                <h2 class="text-xl font-semibold border-b pb-2 text-gray-700">Transaction Details (POS)</h2>
+
+                <!-- Customer Details -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="input-group">
+                        <label for="customerName" class="block text-sm font-medium text-gray-700 mb-1">Customer Name (Optional)</label>
+                        <input type="text" name="customerName" id="customerName" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
                     </div>
-                    <div>
-                        <label for="customerEmail" class="block text-sm font-medium text-gray-700">Customer Email (for Receipt)</label>
-                        <input type="email" id="customerEmail" name="customerEmail" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border">
+                    <div class="input-group">
+                        <label for="customerEmail" class="block text-sm font-medium text-gray-700 mb-1">Customer Email (Required for Receipt)</label>
+                        <input type="email" name="customerEmail" id="customerEmail" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
                     </div>
                 </div>
 
+                <!-- Product Details -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                        <label for="productName" class="block text-sm font-medium text-gray-700">Product Name</label>
-                        <input type="text" id="productName" name="productName" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border">
+                    <div class="input-group sm:col-span-1">
+                        <label for="productName" class="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
+                        <input type="text" name="productName" id="productName" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
                     </div>
-                    <div>
-                        <label for="quantity" class="block text-sm font-medium text-gray-700">Quantity</label>
-                        <input type="number" id="quantity" name="quantity" min="1" required value="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border">
+                    <div class="input-group sm:col-span-1">
+                        <label for="quantity" class="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                        <input type="number" name="quantity" id="quantity" value="1" min="1" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
                     </div>
-                    <div>
-                        <label for="unitPrice" class="block text-sm font-medium text-gray-700">Unit Price (KSh)</label>
-                        <input type="number" id="unitPrice" name="unitPrice" step="0.01" min="0.01" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
-                    <div>
-                        <p class="text-lg font-bold text-gray-800">Sale Total: <span id="saleTotal" class="text-indigo-600">KSh 0.00</span></p>
-                        <input type="hidden" id="calculatedTotal" name="calculatedTotal">
-                    </div>
-                    <div>
-                        <label for="cashTendered" class="block text-sm font-medium text-gray-700">Cash Tendered (KSh)</label>
-                        <input type="number" id="cashTendered" name="amountPaid" step="0.01" min="0" required value="0.00" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border text-lg font-semibold">
+                    <div class="input-group sm:col-span-1">
+                        <label for="unitPrice" class="block text-sm font-medium text-gray-700 mb-1">Unit Price (KSh)</label>
+                        <input type="number" name="unitPrice" id="unitPrice" value="0.00" min="0" step="0.01" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div id="changeGivenContainer">
-                        <p class="text-md font-medium text-gray-800">Change Given: <span id="changeGivenDisplay" class="text-green-600 font-bold">KSh 0.00</span></p>
-                        <input type="hidden" id="changeGiven" name="changeGiven">
-                    </div>
-                    <div id="creditDueContainer">
-                        <p class="text-md font-medium text-gray-800">Credit Due: <span id="creditDueDisplay" class="text-red-600 font-bold">KSh 0.00</span></p>
-                        <input type="hidden" id="creditDue" name="creditDue">
-                    </div>
+                <!-- Hidden inputs for calculated values -->
+                <input type="hidden" name="calculatedTotal" id="calculatedTotal" value="0.00">
+                <input type="hidden" name="changeGiven" id="changeGiven" value="0.00">
+                <input type="hidden" name="creditDue" id="creditDue" value="0.00">
+                <input type="hidden" name="action" value="recordSale"> <!-- Added action for clarity -->
+            </div>
+            
+            <!-- Payment Column (Right/Side) -->
+            <div class="space-y-4 lg:col-span-1 card bg-white p-6 rounded-xl">
+                <h2 class="text-xl font-semibold border-b pb-2 text-gray-700">Payment & Summary (Cash)</h2>
+
+                <!-- Total Display -->
+                <div class="text-center bg-primary/10 p-4 rounded-xl">
+                    <p class="text-md text-gray-600 font-medium">Sale Total:</p>
+                    <div id="displayTotal" class="text-primary font-extrabold">KSh 0.00</div>
+                </div>
+
+                <!-- Cash Tendered Input (Single payment field now) -->
+                <div class="input-group">
+                    <label for="amountPaid" class="block text-sm font-medium text-gray-700 mb-1">Cash Tendered (KSh)</label>
+                    <input type="number" name="amountPaid" id="amountPaid" value="0.00" min="0" step="0.01" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
                 </div>
                 
-                <button type="submit" class="w-full py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
+                <!-- Change/Credit Summary -->
+                <div class="space-y-2 pt-2 border-t mt-4">
+                    <div class="flex justify-between items-center text-md font-medium">
+                        <span class="text-gray-600">Change Given:</span>
+                        <span id="displayChange" class="text-secondary font-bold">KSh 0.00</span>
+                    </div>
+                    <div class="flex justify-between items-center text-md font-medium">
+                        <span class="text-gray-600">Credit Due:</span>
+                        <span id="displayCredit" class="text-red-500 font-bold">KSh 0.00</span>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="w-full py-3 mt-4 bg-primary text-white font-bold rounded-lg hover:bg-primary/90 transition duration-150 transform hover:scale-[1.01]">
                     Record Sale & Send Receipt
                 </button>
-            </form>
-
-            <div id="statusMessage" class="mt-4 p-4 rounded-md hidden"></div>
-        </section>
-
-        <section class="lg:col-span-1 space-y-6">
-            <h2 class="text-2xl font-semibold text-gray-800 border-b pb-2">Live Dashboard</h2>
-            <button onclick="fetchDashboardData()" class="w-full py-2 px-4 text-sm font-medium text-indigo-600 border border-indigo-600 rounded-md hover:bg-indigo-50 transition duration-150 ease-in-out">
-                Refresh Data
-            </button>
-
-            <div id="dashboardMetrics" class="space-y-4">
-                <div class="dashboard-metric bg-white p-4 rounded-xl">
-                    <p class="text-sm font-medium text-gray-500">Total Sales Today</p>
-                    <p id="metricSalesToday" class="text-2xl font-extrabold text-gray-900 mt-1">--</p>
-                </div>
-                <div class="dashboard-metric bg-white p-4 rounded-xl">
-                    <p class="text-sm font-medium text-gray-500">Revenue (Month)</p>
-                    <p id="metricRevenueMonth" class="text-2xl font-extrabold text-gray-900 mt-1">--</p>
-                </div>
-                <div class="dashboard-metric bg-white p-4 rounded-xl">
-                    <p class="text-sm font-medium text-gray-500">Top Selling Product</p>
-                    <p id="metricTopProduct" class="text-2xl font-extrabold text-gray-900 mt-1">--</p>
-                </div>
+                
+                <!-- Submission Status Message -->
+                <div id="statusMessage" class="text-center mt-3 text-sm"></div>
             </div>
-        </section>
+
+        </form>
     </div>
 
     <script>
-        // CRITICAL: GOOGLE APPS SCRIPT WEB APP URL (Provided by User)
-        const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwWo1GI42B9Os1-yI31PjSEr_gXS1aoG9NtBjm2u2ZOxNZDQ_YFk3cx09q6MrUhnAMS_g/exec";
-
         const form = document.getElementById('salesForm');
+        const renewalForm = document.getElementById('renewalForm');
+        const renewalModal = document.getElementById('renewalModal');
+        const modalContent = document.getElementById('modalContent');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const subBar = document.getElementById('subscriptionBar');
+        const subStatusSpan = document.getElementById('subStatus');
+        const subExpirySpan = document.getElementById('subExpiry');
+        const renewalStatusMessage = document.getElementById('renewalStatusMessage');
+
+        // POS Elements
         const quantityInput = document.getElementById('quantity');
-        const priceInput = document.getElementById('unitPrice');
-        const cashTenderedInput = document.getElementById('cashTendered'); // Still use ID 'cashTendered' for JS calculations
-        
-        const saleTotalDisplay = document.getElementById('saleTotal');
-        const calculatedTotalInput = document.getElementById('calculatedTotal');
-        
-        const changeGivenDisplay = document.getElementById('changeGivenDisplay'); 
-        const changeGivenInput = document.getElementById('changeGiven'); 
-        const creditDueDisplay = document.getElementById('creditDueDisplay'); 
-        const creditDueInput = document.getElementById('creditDue'); 
-        
-        const statusMessage = document.getElementById('statusMessage');
-        const loadingOverlay = document.getElementById('loading-overlay');
+        const unitPriceInput = document.getElementById('unitPrice');
+        const amountPaidInput = document.getElementById('amountPaid');
+        const displayTotal = document.getElementById('displayTotal');
+        const displayChange = document.getElementById('displayChange');
+        const displayCredit = document.getElementById('displayCredit');
+        const calculatedTotalHidden = document.getElementById('calculatedTotal');
+        const changeGivenHidden = document.getElementById('changeGiven');
+        const creditDueHidden = document.getElementById('creditDue');
+        const statusMessageDiv = document.getElementById('statusMessage');
 
         /**
-         * Shows a temporary status message (success/error).
-         * @param {string} message - The message content.
-         * @param {string} type - 'success' or 'error'.
+         * Opens the renewal modal with specific message and styling.
+         * @param {string} status - The subscription status.
+         * @param {string} expiryDate - The subscription end date.
          */
-        function showStatus(message, type) {
-            statusMessage.textContent = message;
-            statusMessage.classList.remove('hidden', 'bg-red-100', 'text-red-800', 'bg-green-100', 'text-green-800');
-            if (type === 'success') {
-                statusMessage.classList.add('bg-green-100', 'text-green-800');
-            } else {
-                statusMessage.classList.add('bg-red-100', 'text-red-800');
-            }
-            // Hide after 5 seconds
+        function openRenewalModal(status, expiryDate) {
+            document.getElementById('renewalEmail').value = BUSINESS_EMAIL;
+            
+            renewalModal.classList.remove('hidden');
+            // Animate In
             setTimeout(() => {
-                statusMessage.classList.add('hidden');
-            }, 5000);
+                renewalModal.style.opacity = '1';
+                modalContent.style.transform = 'scale(1)';
+                modalContent.style.opacity = '1';
+            }, 10); 
+
+            let bgColor = 'bg-red-600';
+            
+            if (status === 'EXPIRED') {
+                modalTitle.textContent = "ACCOUNT EXPIRED!";
+                modalMessage.textContent = `Your subscription expired on ${expiryDate}. Renew immediately to resume service.`;
+                bgColor = 'bg-red-600'; // Red for expired
+                form.querySelector('button[type="submit"]').disabled = true;
+                statusMessageDiv.textContent = "Subscription expired. POS usage disabled.";
+            } else if (status === 'Expiring Soon') {
+                modalTitle.textContent = "RENEWAL REMINDER!";
+                modalMessage.textContent = `Your subscription is expiring soon on ${expiryDate}. Renew now to avoid interruption.`;
+                bgColor = 'bg-amber-500'; // Amber for expiring soon
+                form.querySelector('button[type="submit"]').disabled = false;
+                statusMessageDiv.textContent = "";
+            }
+
+            subBar.classList.remove('bg-gray-600', 'bg-secondary', 'bg-red-600', 'bg-amber-500');
+            subBar.classList.add(bgColor);
+        }
+        
+        /**
+         * Closes the renewal modal.
+         */
+        function closeRenewalModal() {
+            // Animate Out
+            modalContent.style.transform = 'scale(0.95)';
+            modalContent.style.opacity = '0';
+            setTimeout(() => {
+                renewalModal.classList.add('hidden');
+                renewalModal.style.opacity = '0';
+            }, 300);
         }
 
+
         /**
-         * Calculates the total sale amount and the change/credit dynamically.
+         * Fetches and displays the subscription status and POS metrics.
          */
-        function calculateAllTotals() {
-            const qty = parseFloat(quantityInput.value) || 0;
-            const price = parseFloat(priceInput.value) || 0;
-            const cash = parseFloat(cashTenderedInput.value) || 0;
+        async function fetchDashboardData() {
+            try {
+                const url = `${FORM_URL}?email=${encodeURIComponent(BUSINESS_EMAIL)}`;
+                const response = await fetch(url);
+                const data = await response.json();
 
-            const total = qty * price;
-            const difference = cash - total;
-            
-            // Format total display and hidden input
-            saleTotalDisplay.textContent = `KSh ${total.toFixed(2)}`;
-            calculatedTotalInput.value = total.toFixed(2); 
+                if (data.subscription) {
+                    const sub = data.subscription;
+                    subStatusSpan.textContent = sub.status;
+                    subExpirySpan.textContent = `Expires: ${sub.end}`;
+                    
+                    subBar.classList.remove('bg-gray-600', 'bg-secondary', 'bg-red-600', 'bg-amber-500');
 
-            // Calculate Change Given and Credit Due
-            let change = 0.00;
-            let credit = 0.00;
+                    if (sub.status === 'Active') {
+                        subBar.classList.add('bg-secondary');
+                        form.querySelector('button[type="submit"]').disabled = false;
+                        statusMessageDiv.textContent = "";
+                    } else if (sub.status === 'Expiring Soon') {
+                        subBar.classList.add('bg-amber-500');
+                        openRenewalModal(sub.status, sub.end);
+                        // Sale is still allowed when expiring soon
+                        form.querySelector('button[type="submit"]').disabled = false; 
+                    } else if (sub.status === 'EXPIRED' || sub.status === 'Unsubscribed' || sub.status === 'Sheet Error' || sub.status === 'Unknown') {
+                        subBar.classList.add('bg-red-600');
+                        openRenewalModal('EXPIRED', sub.end); 
+                        // Sale is disabled if expired or status is unknown/error
+                        form.querySelector('button[type="submit"]').disabled = true;
+                    } 
+                }
+
+            } catch (error) {
+                console.error("Error fetching dashboard data:", error);
+                subStatusSpan.textContent = "Connection Error";
+                subBar.classList.add('bg-red-600');
+            }
+        }
+
+
+        // POS Logic 
+
+        /**
+         * Calculates the Sale Total, Change Given, and Credit Due.
+         */
+        function calculateChange() {
+            const quantity = parseFloat(quantityInput.value) || 0;
+            const unitPrice = parseFloat(unitPriceInput.value) || 0;
+            const amountPaid = parseFloat(amountPaidInput.value) || 0;
+
+            const total = quantity * unitPrice;
+            const difference = amountPaid - total;
+
+            let changeGiven = 0;
+            let creditDue = 0;
 
             if (difference > 0) {
-                change = difference;
-                credit = 0.00;
+                changeGiven = difference; // Customer overpaid, give change
             } else if (difference < 0) {
-                change = 0.00;
-                credit = Math.abs(difference);
+                creditDue = Math.abs(difference); // Customer underpaid, credit due
             }
-            
-            // Update Change Display
-            changeGivenDisplay.textContent = `KSh ${change.toFixed(2)}`;
-            changeGivenInput.value = change.toFixed(2);
 
-            // Update Credit Display
-            creditDueDisplay.textContent = `KSh ${credit.toFixed(2)}`;
-            creditDueInput.value = credit.toFixed(2);
-            
-            // Styling for clarity (optional but helpful)
-            document.getElementById('changeGivenContainer').classList.toggle('hidden', change === 0.00 && credit > 0);
-            document.getElementById('creditDueContainer').classList.toggle('hidden', credit === 0.00 && change > 0);
+            // Update DOM displays
+            displayTotal.textContent = `KSh ${total.toFixed(2)}`;
+            displayChange.textContent = `KSh ${changeGiven.toFixed(2)}`;
+            displayCredit.textContent = `KSh ${creditDue.toFixed(2)}`;
 
-            if (change > 0) {
-                changeGivenDisplay.classList.remove('text-red-600');
-                changeGivenDisplay.classList.add('text-green-600');
-            } else if (credit > 0) {
-                creditDueDisplay.classList.remove('text-green-600');
-                creditDueDisplay.classList.add('text-red-600');
-            } else {
-                changeGivenDisplay.classList.remove('text-red-600');
-                changeGivenDisplay.classList.add('text-green-600');
-                creditDueDisplay.classList.remove('text-red-600');
-                creditDueDisplay.classList.add('text-green-600');
-            }
+            // Update hidden form fields for submission
+            calculatedTotalHidden.value = total.toFixed(2);
+            changeGivenHidden.value = changeGiven.toFixed(2);
+            creditDueHidden.value = creditDue.toFixed(2);
         }
 
-        // Event listeners for dynamic calculation
-        quantityInput.addEventListener('input', calculateAllTotals);
-        priceInput.addEventListener('input', calculateAllTotals);
-        cashTenderedInput.addEventListener('input', calculateAllTotals); // Listener for real-time change/credit
-
         /**
-         * Submits the form data to the Apps Script Web App.
-         * @param {Event} event - The form submission event.
+         * Handles POS form submission via AJAX.
          */
-        form.addEventListener('submit', async (event) => {
-            event.preventDefault();
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            // Re-check if button is disabled (should be handled by fetchDashboardData)
+            if(e.target.querySelector('button[type="submit"]').disabled) return; 
 
-            loadingOverlay.style.display = 'flex';
-            
-            // Ensure final calculation is correct before submission
-            calculateAllTotals(); 
+            statusMessageDiv.innerHTML = '<span class="text-primary font-medium">Processing transaction...</span>';
+            const submitButton = form.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
 
             const formData = new FormData(form);
-            const data = {};
-            formData.forEach((value, key) => data[key] = value);
-            
-            // Format data for URL-encoded POST body
-            const params = new URLSearchParams(data);
+            const data = new URLSearchParams(formData);
 
-            let success = false;
-            let responseData = { result: "Error", message: "Network error or script timeout." };
+            try {
+                const response = await fetch(FORM_URL, {
+                    method: 'POST',
+                    body: data,
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                });
 
-            // Exponential backoff for API call
-            for (let i = 0; i < 3; i++) {
-                try {
-                    const response = await fetch(APPS_SCRIPT_WEB_APP_URL, {
-                        method: 'POST',
-                        mode: 'cors', // Crucial for cross-origin requests
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                        },
-                        body: params.toString() // Send data in body for POST
-                    });
-
-                    if (response.ok) {
-                        responseData = await response.json();
-                        success = responseData.result === "Success";
-                        break;
-                    } else {
-                        console.error(`Attempt ${i + 1} failed with status: ${response.status}`);
-                    }
-                } catch (error) {
-                    console.error(`Attempt ${i + 1} failed:`, error);
+                const result = await response.json();
+                
+                if (result.result === 'Success') {
+                    statusMessageDiv.innerHTML = `<span class="text-secondary font-bold">✅ Success! ${result.message}</span>`;
+                    form.reset();
+                    document.getElementById('amountPaid').value = '0.00';
+                    calculateChange();
+                } else {
+                    statusMessageDiv.innerHTML = `<span class="text-red-500 font-bold">❌ Error: ${result.message}</span>`;
                 }
-                if (!success && i < 2) {
-                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000)); // Wait 1s, 2s, then 4s
-                }
-            }
 
-            loadingOverlay.style.display = 'none';
-
-            if (success) {
-                showStatus(`Sale recorded successfully! Receipt sent to ${data.customerEmail}.`, "success");
-                form.reset();
-                calculateAllTotals(); // Reset total and change/credit display
-                fetchDashboardData(); // Refresh dashboard
-            } else {
-                showStatus(`Failed to record sale. Error: ${responseData.message || 'Check Apps Script logs.'}`, "error");
+            } catch (error) {
+                console.error("Submission Error:", error);
+                statusMessageDiv.innerHTML = '<span class="text-red-500 font-bold">❌ Network Error. Could not connect to the backend script.</span>';
+            } finally {
+                // Re-fetch status to potentially re-enable the button if renewal happened in the background
+                await fetchDashboardData(); 
+                setTimeout(() => { statusMessageDiv.textContent = ''; }, 5000);
             }
         });
 
         /**
-         * Fetches and updates the dashboard metrics.
+         * Handles Renewal form submission via AJAX.
          */
-        async function fetchDashboardData() {
-            loadingOverlay.style.display = 'flex';
+        renewalForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-            const url = `${APPS_SCRIPT_WEB_APP_URL}?action=getDashboard`; // Added action parameter for doGet
+            renewalStatusMessage.innerHTML = '<span class="text-primary font-medium">Processing renewal...</span>';
+            const submitButton = renewalForm.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
 
+            const formData = new FormData(renewalForm);
+            const data = new URLSearchParams(formData);
+            
             try {
-                const response = await fetch(url, {
-                    method: 'GET',
-                    mode: 'cors'
+                const response = await fetch(FORM_URL, {
+                    method: 'POST',
+                    body: data,
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    document.getElementById('metricSalesToday').textContent = data.salesToday;
-
-                    // Updated: Assume the backend sends "$123.45" and replace the '$' with 'KSh '
-                    const revenueKsh = String(data.revenueMonth).replace(/^\$/, 'KSh ');
-                    document.getElementById('metricRevenueMonth').textContent = revenueKsh;
-
-                    document.getElementById('metricTopProduct').textContent = data.topProduct;
-                    
-                    showStatus("Dashboard data refreshed.", "success");
-
+                const result = await response.json();
+                
+                if (result.result === 'Success') {
+                    renewalStatusMessage.innerHTML = `<span class="text-secondary font-bold">✅ Success! ${result.message}</span>`;
+                    renewalForm.reset();
+                    // Crucial: Re-fetch status and close modal
+                    await fetchDashboardData(); 
+                    closeRenewalModal();
                 } else {
-                    showStatus("Failed to load dashboard data. Check Apps Script deployment.", "error");
+                    renewalStatusMessage.innerHTML = `<span class="text-red-500 font-bold">❌ Renewal Failed: ${result.message}</span>`;
                 }
-            } catch (error) {
-                console.error("Dashboard fetch error:", error);
-                showStatus("Dashboard network error. Check console.", "error");
-            } finally {
-                loadingOverlay.style.display = 'none';
-            }
-        }
 
-        // Initialize on load
-        window.onload = () => {
-            calculateAllTotals(); // Set initial total, change, and credit
-            fetchDashboardData(); // Load dashboard on startup
-        };
+            } catch (error) {
+                console.error("Renewal Error:", error);
+                renewalStatusMessage.innerHTML = '<span class="text-red-500 font-bold">❌ Network Error. Could not process renewal.</span>';
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Attach POS input listeners
+            [quantityInput, unitPriceInput, amountPaidInput].forEach(input => {
+                input.addEventListener('input', calculateChange);
+            });
+            calculateChange();
+            
+            // Fetch subscription status immediately
+            fetchDashboardData();
+        });
 
     </script>
 </body>
