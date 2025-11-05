@@ -106,6 +106,20 @@
             <span id="subExpiry">Expiry: N/A</span>
         </div>
 
+        <!-- NEW: Business Metrics Dashboard -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+            <!-- Today's Sales Card -->
+            <div class="card bg-white p-5 rounded-xl border border-gray-200">
+                <p class="text-sm font-medium text-gray-500">Today's Sales Amount (KSh)</p>
+                <div id="todaySales" class="text-2xl font-extrabold text-secondary mt-1">KSh 0.00</div>
+            </div>
+            <!-- Monthly Revenue Card -->
+            <div class="card bg-white p-5 rounded-xl border border-gray-200">
+                <p class="text-sm font-medium text-gray-500">Monthly Revenue (KSh)</p>
+                <div id="monthlyRevenue" class="text-2xl font-extrabold text-primary mt-1">KSh 0.00</div>
+            </div>
+        </div>
+
         <form id="salesForm" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
             <!-- Transaction Details Column (Left/Top) -->
@@ -199,6 +213,10 @@
         const subExpirySpan = document.getElementById('subExpiry');
         const renewalStatusMessage = document.getElementById('renewalStatusMessage');
 
+        // NEW: Metric Display Elements
+        const todaySalesDisplay = document.getElementById('todaySales');
+        const monthlyRevenueDisplay = document.getElementById('monthlyRevenue');
+
         // POS Elements
         const quantityInput = document.getElementById('quantity');
         const unitPriceInput = document.getElementById('unitPrice');
@@ -262,7 +280,7 @@
 
 
         /**
-         * Fetches and displays the subscription status and POS metrics.
+         * Fetches and displays the subscription status AND POS metrics.
          */
         async function fetchDashboardData() {
             try {
@@ -292,6 +310,16 @@
                         // Sale is disabled if expired or status is unknown/error
                         form.querySelector('button[type="submit"]').disabled = true;
                     } 
+                }
+
+                // NEW: Metrics Logic
+                if (data.metrics) {
+                    // Assuming the backend provides metrics as numbers, use toFixed(2) for display
+                    todaySalesDisplay.textContent = `KSh ${parseFloat(data.metrics.totalSalesToday || 0).toFixed(2)}`;
+                    monthlyRevenueDisplay.textContent = `KSh ${parseFloat(data.metrics.monthlyRevenue || 0).toFixed(2)}`;
+                } else {
+                    todaySalesDisplay.textContent = 'KSh N/A';
+                    monthlyRevenueDisplay.textContent = 'KSh N/A';
                 }
 
             } catch (error) {
@@ -372,7 +400,7 @@
                 console.error("Submission Error:", error);
                 statusMessageDiv.innerHTML = '<span class="text-red-500 font-bold">❌ Network Error. Could not connect to the backend script.</span>';
             } finally {
-                // Re-fetch status to potentially re-enable the button if renewal happened in the background
+                // Re-fetch status to update metrics and potentially re-enable the button
                 await fetchDashboardData(); 
                 setTimeout(() => { statusMessageDiv.textContent = ''; }, 5000);
             }
@@ -426,7 +454,7 @@
             });
             calculateChange();
             
-            // Fetch subscription status immediately
+            // Fetch subscription status and metrics immediately
             fetchDashboardData();
         });
 
