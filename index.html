@@ -1,26 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <base target="_top">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Business POS Terminal</title>
-    <!-- Load Tailwind CSS from CDN -->
+    <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* Custom font */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f8fafc;
-            min-height: 100vh;
+            background-color: #f8fafc; /* Tailwind gray-50 */
         }
         .card {
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
+        /* Custom styling for the large total display */
         #displayTotal {
             transition: all 0.3s ease-in-out;
-            font-size: 2.5rem;
+            font-size: 2.5rem; /* Larger font for mobile */
         }
+        /* Modal backdrop styling */
         .modal-backdrop {
             position: fixed;
             top: 0;
@@ -29,9 +30,6 @@
             height: 100%;
             background-color: rgba(0, 0, 0, 0.75);
             z-index: 50;
-        }
-        .view {
-            display: none; /* Controlled by JavaScript */
         }
     </style>
     <script>
@@ -47,40 +45,59 @@
         }
     </script>
 </head>
-<body class="p-4 sm:p-8 flex justify-center items-start">
+<body class="min-h-screen p-4 sm:p-8">
 
-    <!-- LOGIN VIEW -->
-    <div id="loginView" class="view w-full max-w-sm pt-20">
-        <div class="card bg-white p-8 rounded-xl border border-gray-200">
-            <h1 class="text-3xl font-extrabold text-center text-primary mb-6">Smart POS Login</h1>
-            
-            <form id="loginForm" class="space-y-4">
-                <!-- Business Name used to create mock user identifier -->
-                <div class="input-group">
-                    <label for="loginBusinessName" class="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
-                    <input type="text" id="loginBusinessName" placeholder="Smart Retail Co." required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
-                </div>
-                <!-- Password (Mocked for security simulation) -->
-                <div class="input-group">
-                    <label for="loginPassword" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <input type="password" id="loginPassword" placeholder="Enter secure password" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
-                </div>
+    <script>
+    // CRITICAL: YOUR DEPLOYED GOOGLE APPS SCRIPT URL
+    const FORM_URL = 'https://script.google.com/macros/s/AKfycbwDaROC791s5DfluLFOEVyQaQPJKva6iwbF0Sq9faU25HvKmRhuTVzx7Aezyji1p1aeXQ/exec';
+    
+    // User/Business Email for Subscription Check
+    const BUSINESS_EMAIL = 'Pascollanm@gmail.com'; 
+    </script>
+
+    <!-- Subscription Alert Modal -->
+    <div id="renewalModal" class="modal-backdrop hidden transition duration-300 ease-in-out">
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="bg-white card rounded-xl max-w-lg w-full p-6 space-y-4 transform transition-all duration-300 scale-95 opacity-0" id="modalContent">
+                <h3 id="modalTitle" class="text-2xl font-bold text-red-600 border-b pb-2">Subscription Warning</h3>
+                <p id="modalMessage" class="text-gray-700"></p>
                 
-                <button type="submit" class="w-full py-3 mt-4 bg-secondary text-white font-bold rounded-lg hover:bg-secondary/90 transition duration-150 transform hover:scale-[1.01]">
-                    Log In / Initialize Session
-                </button>
-            </form>
-            <p class="text-xs text-gray-500 text-center mt-4">
-                This mock login uses your business name to create a unique ID for the backend.
-            </p>
+                <!-- Renewal Form -->
+                <form id="renewalForm" class="space-y-3 pt-3 border-t">
+                    <input type="hidden" name="action" value="renew">
+                    <input type="hidden" name="renewalEmail" id="renewalEmail" value="">
+                    
+                    <h4 class="text-lg font-semibold text-primary">Renew Now (30 Days)</h4>
+                    
+                    <div class="input-group">
+                        <label for="businessName" class="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
+                        <input type="text" name="businessName" id="businessName" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    </div>
+                    <div class="input-group">
+                        <label for="renewalAmount" class="block text-sm font-medium text-gray-700 mb-1">Amount Paid (KSh)</label>
+                        <input type="number" name="renewalAmount" id="renewalAmount" value="2000.00" min="1" step="0.01" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-secondary focus:border-secondary">
+                    </div>
+                    <div class="input-group">
+                        <label for="paymentReference" class="block text-sm font-medium text-gray-700 mb-1">Payment Reference/Code</label>
+                        <input type="text" name="paymentReference" id="paymentReference" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    </div>
+
+                    <button type="submit" class="w-full py-2 bg-secondary text-white font-bold rounded-lg hover:bg-secondary/90 transition duration-150">
+                        Process Renewal (Mock Payment)
+                    </button>
+                    <div id="renewalStatusMessage" class="text-center mt-2 text-sm"></div>
+                </form>
+
+                <button onclick="closeRenewalModal()" class="w-full py-1 text-sm text-gray-500 hover:text-gray-700">Close POS (For now)</button>
+            </div>
         </div>
     </div>
 
-    <!-- DASHBOARD VIEW -->
-    <div id="dashboardView" class="view w-full max-w-4xl">
+
+    <div class="max-w-4xl mx-auto">
         <header class="mb-6 text-center">
             <h1 class="text-3xl font-extrabold text-primary">Smart Sales Terminal (KSh)</h1>
-            <p class="text-gray-500 mt-1">Logged in as: <span id="businessNameDisplay" class="font-semibold text-gray-700">Loading...</span></p>
+            <p class="text-gray-500 mt-1">Process sales quickly and record transactions instantly.</p>
         </header>
 
         <!-- Subscription Status Bar -->
@@ -89,17 +106,17 @@
             <span id="subExpiry">Expiry: N/A</span>
         </div>
 
-        <!-- Business Metrics Dashboard -->
+        <!-- NEW: Business Metrics Dashboard -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
             <!-- Today's Sales Card -->
             <div class="card bg-white p-5 rounded-xl border border-gray-200">
                 <p class="text-sm font-medium text-gray-500">Today's Sales Amount (KSh)</p>
                 <div id="todaySales" class="text-2xl font-extrabold text-secondary mt-1">KSh 0.00</div>
             </div>
-            <!-- Subscription Days Left Card -->
+            <!-- Monthly Revenue Card -->
             <div class="card bg-white p-5 rounded-xl border border-gray-200">
-                <p class="text-sm font-medium text-gray-500">Subscription Days Left</p>
-                <div id="daysLeft" class="text-2xl font-extrabold text-primary mt-1">N/A</div>
+                <p class="text-sm font-medium text-gray-500">Monthly Revenue (KSh)</p>
+                <div id="monthlyRevenue" class="text-2xl font-extrabold text-primary mt-1">KSh 0.00</div>
             </div>
         </div>
 
@@ -109,11 +126,6 @@
             <div class="lg:col-span-2 space-y-4 card bg-white p-6 rounded-xl">
                 <h2 class="text-xl font-semibold border-b pb-2 text-gray-700">Transaction Details (POS)</h2>
 
-                <!-- Hidden inputs for user and action -->
-                <input type="hidden" name="userEmail" id="userEmail" value="">
-                <input type="hidden" name="businessName" id="businessName" value="">
-                <input type="hidden" name="action" value="recordSale">
-                
                 <!-- Customer Details -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="input-group">
@@ -146,6 +158,7 @@
                 <input type="hidden" name="calculatedTotal" id="calculatedTotal" value="0.00">
                 <input type="hidden" name="changeGiven" id="changeGiven" value="0.00">
                 <input type="hidden" name="creditDue" id="creditDue" value="0.00">
+                <input type="hidden" name="action" value="recordSale"> <!-- Added action for clarity -->
             </div>
             
             <!-- Payment Column (Right/Side) -->
@@ -158,7 +171,7 @@
                     <div id="displayTotal" class="text-primary font-extrabold">KSh 0.00</div>
                 </div>
 
-                <!-- Cash Tendered Input -->
+                <!-- Cash Tendered Input (Single payment field now) -->
                 <div class="input-group">
                     <label for="amountPaid" class="block text-sm font-medium text-gray-700 mb-1">Cash Tendered (KSh)</label>
                     <input type="number" name="amountPaid" id="amountPaid" value="0.00" min="0" step="0.01" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
@@ -183,66 +196,12 @@
                 
                 <!-- Submission Status Message -->
                 <div id="statusMessage" class="text-center mt-3 text-sm"></div>
-                
-                <!-- Logout Button -->
-                <button type="button" onclick="logout()" class="w-full py-1 text-sm text-gray-500 hover:text-gray-700 mt-2">Log Out</button>
             </div>
 
         </form>
     </div>
-    
-    <!-- Subscription Alert Modal (Remains outside the main views) -->
-    <div id="renewalModal" class="modal-backdrop hidden transition duration-300 ease-in-out">
-        <div class="fixed inset-0 flex items-center justify-center p-4">
-            <div class="bg-white card rounded-xl max-w-lg w-full p-6 space-y-4 transform transition-all duration-300 scale-95 opacity-0" id="modalContent">
-                <h3 id="modalTitle" class="text-2xl font-bold text-red-600 border-b pb-2">Subscription Warning</h3>
-                <p id="modalMessage" class="text-gray-700"></p>
-                
-                <!-- Renewal Form -->
-                <form id="renewalForm" class="space-y-3 pt-3 border-t">
-                    <input type="hidden" name="renewalEmail" id="renewalEmail" value="">
-                    
-                    <h4 class="text-lg font-semibold text-primary">Renew Now (30 Days)</h4>
-                    
-                    <div class="input-group">
-                        <label for="businessNameInput" class="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
-                        <input type="text" name="businessName" id="businessNameInput" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
-                    </div>
-                    <div class="input-group">
-                        <label for="renewalAmount" class="block text-sm font-medium text-gray-700 mb-1">Amount Paid (KSh)</label>
-                        <input type="number" name="renewalAmount" id="renewalAmount" value="2000.00" min="1" step="0.01" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-secondary focus:border-secondary">
-                    </div>
-                    <div class="input-group">
-                        <label for="paymentReference" class="block text-sm font-medium text-gray-700 mb-1">Payment Reference/Code</label>
-                        <input type="text" name="paymentReference" id="paymentReference" required class="w-full p-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
-                    </div>
-
-                    <button type="submit" class="w-full py-2 bg-secondary text-white font-bold rounded-lg hover:bg-secondary/90 transition duration-150">
-                        Process Renewal (Mock Payment)
-                    </button>
-                    <div id="renewalStatusMessage" class="text-center mt-2 text-sm"></div>
-                </form>
-
-                <button type="button" onclick="closeRenewalModal()" class="w-full py-1 text-sm text-gray-500 hover:text-gray-700">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 1. GOOGLE APPS SCRIPT CLIENT RUNTIME (MANDATORY LINK) -->
-    <!-- This links your GitHub-hosted frontend to your Apps Script API backend via google.script.run -->
-    <script type="text/javascript" src="https://script.google.com/macros/s/1YFqrl5WTxqetKnrXIBxWFh0qxASfZT0qrDK04Lg-2zJLOcGXuzKbuqSP/main.js"></script>
 
     <script>
-        // --- Global Variables and DOM Elements ---
-        let userEmail = localStorage.getItem('userEmail');
-        let businessName = localStorage.getItem('businessName');
-
-        // View Elements
-        const loginView = document.getElementById('loginView');
-        const dashboardView = document.getElementById('dashboardView');
-        const loginForm = document.getElementById('loginForm');
-
-        // Dashboard/POS Elements (from previous script)
         const form = document.getElementById('salesForm');
         const renewalForm = document.getElementById('renewalForm');
         const renewalModal = document.getElementById('renewalModal');
@@ -254,10 +213,9 @@
         const subExpirySpan = document.getElementById('subExpiry');
         const renewalStatusMessage = document.getElementById('renewalStatusMessage');
 
-        // Metric Display Elements
-        const businessNameDisplay = document.getElementById('businessNameDisplay');
+        // NEW: Metric Display Elements
         const todaySalesDisplay = document.getElementById('todaySales');
-        const daysLeftDisplay = document.getElementById('daysLeft'); 
+        const monthlyRevenueDisplay = document.getElementById('monthlyRevenue');
 
         // POS Elements
         const quantityInput = document.getElementById('quantity');
@@ -271,132 +229,38 @@
         const creditDueHidden = document.getElementById('creditDue');
         const statusMessageDiv = document.getElementById('statusMessage');
 
-
-        // --- View Management ---
-
-        /**
-         * Switches the displayed view.
-         * @param {string} viewId - 'loginView' or 'dashboardView'
-         */
-        function showView(viewId) {
-            loginView.style.display = 'none';
-            dashboardView.style.display = 'none';
-            
-            if (viewId === 'loginView') {
-                loginView.style.display = 'block';
-            } else if (viewId === 'dashboardView') {
-                dashboardView.style.display = 'block';
-            }
-        }
-
-        /**
-         * Checks local storage for authentication and initializes the dashboard or shows login.
-         */
-        function checkAuthAndInit() {
-            // Update local variables from storage
-            userEmail = localStorage.getItem('userEmail');
-            businessName = localStorage.getItem('businessName');
-
-            if (!userEmail) {
-                showView('loginView');
-                return;
-            }
-            
-            showView('dashboardView');
-
-            // Set user-specific hidden fields
-            document.getElementById('userEmail').value = userEmail;
-            document.getElementById('businessName').value = businessName;
-            document.getElementById('renewalEmail').value = userEmail; // For the renewal form
-            
-            businessNameDisplay.textContent = businessName || 'N/A';
-            // Set the business name input in the renewal form
-            document.getElementById('businessNameInput').value = businessName || '';
-
-            // 1. Calculate POS totals locally
-            [quantityInput, unitPriceInput, amountPaidInput].forEach(input => {
-                input.addEventListener('input', calculateChange);
-            });
-            calculateChange();
-            
-            // 2. Fetch subscription status and metrics from server
-            fetchDashboardData();
-        }
-        
-        /**
-         * Handles the mock login process.
-         */
-        loginForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const name = document.getElementById('loginBusinessName').value.trim();
-            const password = document.getElementById('loginPassword').value.trim(); // New password field
-
-            if (name && password) {
-                // IMPORTANT: We use the Business Name combined with a mock domain 
-                // as the 'userEmail' for the Apps Script API calls (google.script.run) 
-                // which often expect an email format for identification.
-                const mockEmail = name.toLowerCase().replace(/ /g, '.') + '@mock.business';
-                
-                localStorage.setItem('userEmail', mockEmail); 
-                localStorage.setItem('businessName', name);
-                checkAuthAndInit(); // Re-initializes, which switches the view to dashboard
-            }
-        });
-
-
-        /**
-         * Clears session data and redirects to the login page.
-         */
-        function logout() {
-            localStorage.removeItem('userEmail');
-            localStorage.removeItem('businessName');
-            checkAuthAndInit(); // Re-initializes, which switches the view to login
-        }
-
-
-        // --- DASHBOARD LOGIC ---
-
-
         /**
          * Opens the renewal modal with specific message and styling.
-         * @param {string} status - The subscription status provided by the backend.
+         * @param {string} status - The subscription status.
          * @param {string} expiryDate - The subscription end date.
          */
         function openRenewalModal(status, expiryDate) {
+            document.getElementById('renewalEmail').value = BUSINESS_EMAIL;
             
             renewalModal.classList.remove('hidden');
             // Animate In
             setTimeout(() => {
+                renewalModal.style.opacity = '1';
                 modalContent.style.transform = 'scale(1)';
                 modalContent.style.opacity = '1';
-                renewalModal.style.opacity = '1';
             }, 10); 
 
             let bgColor = 'bg-red-600';
             
-            // Clear previous styles
-            modalTitle.classList.remove('text-amber-500', 'text-red-600'); 
-            
-            const submitButton = form.querySelector('button[type="submit"]');
-
-            if (status.includes('Expired') || status.includes('Inactive')) {
-                modalTitle.textContent = "ACCOUNT SUSPENDED!";
-                modalTitle.classList.add('text-red-600');
-                modalMessage.textContent = `Your account is ${status}. Renew immediately to resume service.`;
-                bgColor = 'bg-red-600';
-                submitButton.disabled = true;
-                statusMessageDiv.textContent = "Account suspended. POS usage disabled.";
-            } else if (status.includes('Expiring')) {
+            if (status === 'EXPIRED') {
+                modalTitle.textContent = "ACCOUNT EXPIRED!";
+                modalMessage.textContent = `Your subscription expired on ${expiryDate}. Renew immediately to resume service.`;
+                bgColor = 'bg-red-600'; // Red for expired
+                form.querySelector('button[type="submit"]').disabled = true;
+                statusMessageDiv.textContent = "Subscription expired. POS usage disabled.";
+            } else if (status === 'Expiring Soon') {
                 modalTitle.textContent = "RENEWAL REMINDER!";
-                modalTitle.classList.add('text-amber-500');
                 modalMessage.textContent = `Your subscription is expiring soon on ${expiryDate}. Renew now to avoid interruption.`;
-                bgColor = 'bg-amber-500';
-                // Sale is allowed during the warning period
-                submitButton.disabled = false; 
+                bgColor = 'bg-amber-500'; // Amber for expiring soon
+                form.querySelector('button[type="submit"]').disabled = false;
                 statusMessageDiv.textContent = "";
             }
 
-            // Update subscription bar color
             subBar.classList.remove('bg-gray-600', 'bg-secondary', 'bg-red-600', 'bg-amber-500');
             subBar.classList.add(bgColor);
         }
@@ -408,75 +272,69 @@
             // Animate Out
             modalContent.style.transform = 'scale(0.95)';
             modalContent.style.opacity = '0';
-            renewalModal.style.opacity = '0';
             setTimeout(() => {
                 renewalModal.classList.add('hidden');
+                renewalModal.style.opacity = '0';
             }, 300);
         }
 
 
         /**
-         * Fetches and displays the subscription status and POS metrics securely via Apps Script.
+         * Fetches and displays the subscription status AND POS metrics.
          */
-        function fetchDashboardData() {
-             subStatusSpan.textContent = 'Checking...';
-             subExpirySpan.textContent = '...';
-             todaySalesDisplay.textContent = 'KSh Loading...';
-             daysLeftDisplay.textContent = '...';
-             
-             // Check if the Apps Script environment is available
-             if (typeof google === 'undefined' || typeof google.script === 'undefined') {
-                onDataFailure('Apps Script environment not found. Ensure the main.js script is loaded.');
-                return;
-             }
+        async function fetchDashboardData() {
+            try {
+                const url = `${FORM_URL}?email=${encodeURIComponent(BUSINESS_EMAIL)}`;
+                const response = await fetch(url);
+                const data = await response.json();
 
-             google.script.run
-                .withSuccessHandler(onDataSuccess)
-                .withFailureHandler(onDataFailure)
-                .checkDashboardData(userEmail);
-        }
-        
-        function onDataSuccess(data) {
-            const sub = data.subscription;
-            const metrics = data.metrics;
+                if (data.subscription) {
+                    const sub = data.subscription;
+                    subStatusSpan.textContent = sub.status;
+                    subExpirySpan.textContent = `Expires: ${sub.end}`;
+                    
+                    subBar.classList.remove('bg-gray-600', 'bg-secondary', 'bg-red-600', 'bg-amber-500');
 
-            subStatusSpan.textContent = sub.status;
-            subExpirySpan.textContent = `Expires: ${sub.end}`;
-            
-            // Update Metric Displays
-            todaySalesDisplay.textContent = `KSh ${parseFloat(metrics.totalSalesToday || 0).toFixed(2)}`;
-            daysLeftDisplay.textContent = metrics.daysLeft + ' Days'; // Display days left here
-
-            subBar.classList.remove('bg-gray-600', 'bg-secondary', 'bg-red-600', 'bg-amber-500');
-            const submitButton = form.querySelector('button[type="submit"]');
-
-            if (sub.status === 'Active') {
-                subBar.classList.add('bg-secondary');
-                submitButton.disabled = false;
-            } else if (sub.status.includes('Expiring')) {
-                subBar.classList.add('bg-amber-500');
-                // Open modal only if it's not already open to avoid disruption
-                if (renewalModal.classList.contains('hidden')) {
-                    openRenewalModal(sub.status, sub.end);
+                    if (sub.status === 'Active') {
+                        subBar.classList.add('bg-secondary');
+                        form.querySelector('button[type="submit"]').disabled = false;
+                        statusMessageDiv.textContent = "";
+                    } else if (sub.status === 'Expiring Soon') {
+                        subBar.classList.add('bg-amber-500');
+                        openRenewalModal(sub.status, sub.end);
+                        // Sale is still allowed when expiring soon
+                        form.querySelector('button[type="submit"]').disabled = false; 
+                    } else if (sub.status === 'EXPIRED' || sub.status === 'Unsubscribed' || sub.status === 'Sheet Error' || sub.status === 'Unknown') {
+                        subBar.classList.add('bg-red-600');
+                        openRenewalModal('EXPIRED', sub.end); 
+                        // Sale is disabled if expired or status is unknown/error
+                        form.querySelector('button[type="submit"]').disabled = true;
+                    } 
                 }
-                submitButton.disabled = false; 
-            } else { // Inactive, Expired, Unknown
+
+                // NEW: Metrics Logic
+                if (data.metrics) {
+                    // Assuming the backend provides metrics as numbers, use toFixed(2) for display
+                    todaySalesDisplay.textContent = `KSh ${parseFloat(data.metrics.totalSalesToday || 0).toFixed(2)}`;
+                    monthlyRevenueDisplay.textContent = `KSh ${parseFloat(data.metrics.monthlyRevenue || 0).toFixed(2)}`;
+                } else {
+                    todaySalesDisplay.textContent = 'KSh N/A';
+                    monthlyRevenueDisplay.textContent = 'KSh N/A';
+                }
+
+            } catch (error) {
+                console.error("Error fetching dashboard data:", error);
+                subStatusSpan.textContent = "Connection Error";
                 subBar.classList.add('bg-red-600');
-                openRenewalModal(sub.status, sub.end); 
-                submitButton.disabled = true;
             }
         }
 
-        function onDataFailure(error) {
-            console.error("Dashboard Data Fetch Error:", error);
-            subStatusSpan.textContent = "Connection Error";
-            subBar.classList.add('bg-red-600');
-            statusMessageDiv.textContent = '❌ Could not load dashboard data from server. Check your Apps Script deployment.';
-            form.querySelector('button[type="submit"]').disabled = true;
-        }
 
-        // --- POS Calculation Logic ---
+        // POS Logic 
 
+        /**
+         * Calculates the Sale Total, Change Given, and Credit Due.
+         */
         function calculateChange() {
             const quantity = parseFloat(quantityInput.value) || 0;
             const unitPrice = parseFloat(unitPriceInput.value) || 0;
@@ -489,9 +347,9 @@
             let creditDue = 0;
 
             if (difference > 0) {
-                changeGiven = difference;
+                changeGiven = difference; // Customer overpaid, give change
             } else if (difference < 0) {
-                creditDue = Math.abs(difference);
+                creditDue = Math.abs(difference); // Customer underpaid, credit due
             }
 
             // Update DOM displays
@@ -506,95 +364,99 @@
         }
 
         /**
-         * Handles POS form submission via google.script.run.
+         * Handles POS form submission via AJAX.
          */
-        form.addEventListener('submit', (e) => {
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            // Check if the button is disabled by the subscription status check
-            const submitButton = form.querySelector('button[type="submit"]');
-            if(submitButton.disabled) return; 
-            
-            if (typeof google === 'undefined' || typeof google.script === 'undefined') {
-                statusMessageDiv.innerHTML = '<span class="text-red-500 font-bold">❌ Error: Apps Script environment not found.</span>';
-                return;
-            }
-
+            // Re-check if button is disabled (should be handled by fetchDashboardData)
+            if(e.target.querySelector('button[type="submit"]').disabled) return; 
 
             statusMessageDiv.innerHTML = '<span class="text-primary font-medium">Processing transaction...</span>';
+            const submitButton = form.querySelector('button[type="submit"]');
             submitButton.disabled = true;
 
-            // Create payload object from form data
-            const formData = {};
-            new FormData(form).forEach((value, key) => { formData[key] = value; });
+            const formData = new FormData(form);
+            const data = new URLSearchParams(formData);
 
-            // Call the backend function
-            google.script.run
-                .withSuccessHandler((result) => {
-                    submitButton.disabled = false;
-                    if (result.success) {
-                        statusMessageDiv.innerHTML = `<span class="text-secondary font-bold">✅ Success! ${result.message}</span>`;
-                        // Reset inputs after successful sale
-                        form.reset();
-                        document.getElementById('amountPaid').value = '0.00';
-                        calculateChange();
-                        fetchDashboardData(); // Update metrics after sale
-                    } else {
-                        statusMessageDiv.innerHTML = `<span class="text-red-500 font-bold">❌ Error: ${result.message}</span>`;
-                        fetchDashboardData(); // Check status again if sale failed
-                    }
-                    setTimeout(() => { statusMessageDiv.textContent = ''; }, 5000);
-                })
-                .withFailureHandler((error) => {
-                    submitButton.disabled = false;
-                    statusMessageDiv.innerHTML = '<span class="text-red-500 font-bold">❌ Server Error. Could not record sale.</span>';
-                    console.error("Sale Submission Error:", error);
-                })
-                .recordSale(formData);
+            try {
+                const response = await fetch(FORM_URL, {
+                    method: 'POST',
+                    body: data,
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                });
+
+                const result = await response.json();
+                
+                if (result.result === 'Success') {
+                    statusMessageDiv.innerHTML = `<span class="text-secondary font-bold">✅ Success! ${result.message}</span>`;
+                    form.reset();
+                    document.getElementById('amountPaid').value = '0.00';
+                    calculateChange();
+                } else {
+                    statusMessageDiv.innerHTML = `<span class="text-red-500 font-bold">❌ Error: ${result.message}</span>`;
+                }
+
+            } catch (error) {
+                console.error("Submission Error:", error);
+                statusMessageDiv.innerHTML = '<span class="text-red-500 font-bold">❌ Network Error. Could not connect to the backend script.</span>';
+            } finally {
+                // Re-fetch status to update metrics and potentially re-enable the button
+                await fetchDashboardData(); 
+                setTimeout(() => { statusMessageDiv.textContent = ''; }, 5000);
+            }
         });
 
         /**
-         * Handles Renewal form submission via google.script.run.
+         * Handles Renewal form submission via AJAX.
          */
-        renewalForm.addEventListener('submit', (e) => {
+        renewalForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            if (typeof google === 'undefined' || typeof google.script === 'undefined') {
-                renewalStatusMessage.innerHTML = '<span class="text-red-500 font-bold">❌ Error: Apps Script environment not found.</span>';
-                return;
-            }
-            
             renewalStatusMessage.innerHTML = '<span class="text-primary font-medium">Processing renewal...</span>';
             const submitButton = renewalForm.querySelector('button[type="submit"]');
             submitButton.disabled = true;
 
-            const formData = {};
-            new FormData(renewalForm).forEach((value, key) => { formData[key] = value; });
+            const formData = new FormData(renewalForm);
+            const data = new URLSearchParams(formData);
             
-            // Call the backend function
-            google.script.run
-                .withSuccessHandler((result) => {
-                    submitButton.disabled = false;
-                    if (result.success) {
-                        renewalStatusMessage.innerHTML = `<span class="text-secondary font-bold">✅ Success! ${result.message}</span>`;
-                        renewalForm.reset();
-                        // Crucial: Re-fetch status and close modal
-                        fetchDashboardData(); 
-                        closeRenewalModal();
-                    } else {
-                        renewalStatusMessage.innerHTML = `<span class="text-red-500 font-bold">❌ Renewal Failed: ${result.message}</span>`;
-                    }
-                })
-                .withFailureHandler((error) => {
-                    submitButton.disabled = false;
-                    renewalStatusMessage.innerHTML = '<span class="text-red-500 font-bold">❌ Server Error. Could not process renewal.</span>';
-                    console.error("Renewal Submission Error:", error);
-                })
-                .handleRenewal(formData);
+            try {
+                const response = await fetch(FORM_URL, {
+                    method: 'POST',
+                    body: data,
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                });
+
+                const result = await response.json();
+                
+                if (result.result === 'Success') {
+                    renewalStatusMessage.innerHTML = `<span class="text-secondary font-bold">✅ Success! ${result.message}</span>`;
+                    renewalForm.reset();
+                    // Crucial: Re-fetch status and close modal
+                    await fetchDashboardData(); 
+                    closeRenewalModal();
+                } else {
+                    renewalStatusMessage.innerHTML = `<span class="text-red-500 font-bold">❌ Renewal Failed: ${result.message}</span>`;
+                }
+
+            } catch (error) {
+                console.error("Renewal Error:", error);
+                renewalStatusMessage.innerHTML = '<span class="text-red-500 font-bold">❌ Network Error. Could not process renewal.</span>';
+            } finally {
+                submitButton.disabled = false;
+            }
         });
 
 
-        // Initial check to load the correct view (Login or Dashboard)
-        document.addEventListener('DOMContentLoaded', checkAuthAndInit);
+        document.addEventListener('DOMContentLoaded', () => {
+            // Attach POS input listeners
+            [quantityInput, unitPriceInput, amountPaidInput].forEach(input => {
+                input.addEventListener('input', calculateChange);
+            });
+            calculateChange();
+            
+            // Fetch subscription status and metrics immediately
+            fetchDashboardData();
+        });
 
     </script>
 </body>
