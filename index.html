@@ -54,13 +54,15 @@
             <h1 class="text-3xl font-extrabold text-center text-primary mb-6">Smart POS Login</h1>
             
             <form id="loginForm" class="space-y-4">
-                <div class="input-group">
-                    <label for="loginEmail" class="block text-sm font-medium text-gray-700 mb-1">Business Email</label>
-                    <input type="email" id="loginEmail" placeholder="your@business.com" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
-                </div>
+                <!-- UPDATED FIELD: Business Name -->
                 <div class="input-group">
                     <label for="loginBusinessName" class="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
                     <input type="text" id="loginBusinessName" placeholder="Smart Retail Co." required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                </div>
+                <!-- NEW FIELD: Password -->
+                <div class="input-group">
+                    <label for="loginPassword" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" id="loginPassword" placeholder="Enter secure password" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
                 </div>
                 
                 <button type="submit" class="w-full py-3 mt-4 bg-secondary text-white font-bold rounded-lg hover:bg-secondary/90 transition duration-150 transform hover:scale-[1.01]">
@@ -304,7 +306,7 @@
             document.getElementById('businessName').value = businessName;
             document.getElementById('renewalEmail').value = userEmail; // For the renewal form
             
-            businessNameDisplay.textContent = businessName || userEmail;
+            businessNameDisplay.textContent = businessName || 'N/A';
             // Set the business name input in the renewal form
             document.getElementById('businessNameInput').value = businessName || '';
 
@@ -323,11 +325,16 @@
          */
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const email = document.getElementById('loginEmail').value.trim();
             const name = document.getElementById('loginBusinessName').value.trim();
+            const password = document.getElementById('loginPassword').value.trim(); // New password field
 
-            if (email && name) {
-                localStorage.setItem('userEmail', email);
+            if (name && password) {
+                // IMPORTANT: We use the Business Name combined with a mock domain 
+                // as the 'userEmail' for the backend API calls (google.script.run) 
+                // which often expect an email format for identification.
+                const mockEmail = name.toLowerCase().replace(/ /g, '.') + '@mock.business';
+                
+                localStorage.setItem('userEmail', mockEmail); 
                 localStorage.setItem('businessName', name);
                 checkAuthAndInit(); // Re-initializes, which switches the view to dashboard
             }
