@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Business POS Terminal</title>
+    <!-- Load Tailwind CSS from CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
@@ -54,12 +55,12 @@
             <h1 class="text-3xl font-extrabold text-center text-primary mb-6">Smart POS Login</h1>
             
             <form id="loginForm" class="space-y-4">
-                <!-- UPDATED FIELD: Business Name -->
+                <!-- Business Name used to create mock user identifier -->
                 <div class="input-group">
                     <label for="loginBusinessName" class="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
                     <input type="text" id="loginBusinessName" placeholder="Smart Retail Co." required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
                 </div>
-                <!-- NEW FIELD: Password -->
+                <!-- Password (Mocked for security simulation) -->
                 <div class="input-group">
                     <label for="loginPassword" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
                     <input type="password" id="loginPassword" placeholder="Enter secure password" required class="w-full p-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
@@ -70,11 +71,10 @@
                 </button>
             </form>
             <p class="text-xs text-gray-500 text-center mt-4">
-                This is a mock login to set your session data.
+                This mock login uses your business name to create a unique ID for the backend.
             </p>
         </div>
     </div>
-
 
     <!-- DASHBOARD VIEW -->
     <div id="dashboardView" class="view w-full max-w-4xl">
@@ -112,7 +112,7 @@
                 <!-- Hidden inputs for user and action -->
                 <input type="hidden" name="userEmail" id="userEmail" value="">
                 <input type="hidden" name="businessName" id="businessName" value="">
-                <input type="hidden" name="action" value="recordSale"> 
+                <input type="hidden" name="action" value="recordSale">
                 
                 <!-- Customer Details -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -228,6 +228,9 @@
         </div>
     </div>
 
+    <!-- 1. GOOGLE APPS SCRIPT CLIENT RUNTIME (MANDATORY LINK) -->
+    <!-- This links your GitHub-hosted frontend to your Apps Script API backend via google.script.run -->
+    <script type="text/javascript" src="https://script.google.com/macros/s/1YFqrl5WTxqetKnrXIBxWFh0qxASfZT0qrDK04Lg-2zJLOcGXuzKbuqSP/main.js"></script>
 
     <script>
         // --- Global Variables and DOM Elements ---
@@ -330,7 +333,7 @@
 
             if (name && password) {
                 // IMPORTANT: We use the Business Name combined with a mock domain 
-                // as the 'userEmail' for the backend API calls (google.script.run) 
+                // as the 'userEmail' for the Apps Script API calls (google.script.run) 
                 // which often expect an email format for identification.
                 const mockEmail = name.toLowerCase().replace(/ /g, '.') + '@mock.business';
                 
@@ -351,7 +354,7 @@
         }
 
 
-        // --- DASHBOARD LOGIC (Carried over from previous script) ---
+        // --- DASHBOARD LOGIC ---
 
 
         /**
@@ -421,9 +424,9 @@
              todaySalesDisplay.textContent = 'KSh Loading...';
              daysLeftDisplay.textContent = '...';
              
-             // Secure Apps Script call to get user-specific data
+             // Check if the Apps Script environment is available
              if (typeof google === 'undefined' || typeof google.script === 'undefined') {
-                onDataFailure('google.script.run is not defined (Running outside Apps Script context).');
+                onDataFailure('Apps Script environment not found. Ensure the main.js script is loaded.');
                 return;
              }
 
@@ -468,7 +471,7 @@
             console.error("Dashboard Data Fetch Error:", error);
             subStatusSpan.textContent = "Connection Error";
             subBar.classList.add('bg-red-600');
-            statusMessageDiv.textContent = '❌ Could not load dashboard data from server.';
+            statusMessageDiv.textContent = '❌ Could not load dashboard data from server. Check your Apps Script deployment.';
             form.querySelector('button[type="submit"]').disabled = true;
         }
 
